@@ -7,35 +7,23 @@ import (
     "runtime"
 )
 
-// Control signals
-const (
-	GetNumber = iota
-	Exit
-)
+var i int = 0;
 
-func number_server(add_number <-chan int, control <-chan int, number chan<- int) {
-	var i = 0
-
-	// This for-select pattern is one you will become familiar with if you're using go "correctly".
-	for {
-		select {
-			// TODO: receive different messages and handle them correctly
-			// You will at least need to update the number and handle control signals.
-		}
-	}
-}
-
-func incrementing(add_number chan<-int, finished chan<- bool) {
-	for j := 0; j<1000000; j++ {
-		add_number <- 1
+func incrementing(chn chan int, finished chan bool) {
+	for j := 0; j<1000003; j++ {
+		i = <- chn
+		i++
+		chn <- i
 	}
 	//TODO: signal that the goroutine is finished
   finished<-true
 }
 
-func decrementing(add_number chan<- int, finished chan<- bool) {
+func decrementing(chn chan int, finished chan bool) {
 	for j := 0; j<1000000; j++ {
-		add_number <- -1
+		i = <- chn
+		i--
+		chn <- i
 	}
 	//TODO: signal that the goroutine is finished
   finished<-true
@@ -45,19 +33,18 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// TODO: Construct the required channels
-  chn1 = make(chan int)
-  chn2 = make(chan bool)
+  chn      := make(chan int, 1)
+	finished := make(chan bool, 1)
 
 	// Think about wether the receptions of the number should be unbuffered, or buffered with a fixed queue size.
+	chn <- i
 
 	// TODO: Spawn the required goroutines
-  go incrementing(chn1,chn2)
-  go decrementing(chn1,chn2)
+  go incrementing(chn, finished)
+  go decrementing(chn, finished)
 
 	// TODO: block on finished from both "worker" goroutines
-  <- chn2
-  <- chn2
-	control<-GetNumber
-	Println("The magic number is:", <- number)
-	control<-Exit
+  <- finished 
+  <- finished
+	Println("The magic number is:", i)
 }
